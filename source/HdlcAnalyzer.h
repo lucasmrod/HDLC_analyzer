@@ -93,8 +93,6 @@ protected:
 	Frame mEndFlagFrameToEmit;
   bool mFoundEndFlag;
   
-  U64 mLastFrameEndSample;
-  U8 mLastFrameType;
   vector<Frame> mResultFrames;
 	
 	HdlcSimulationDataGenerator mSimulationDataGenerator;

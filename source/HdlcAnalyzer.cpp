@@ -38,7 +38,6 @@ void HdlcAnalyzer::SetupAnalyzer()
 	mReadingFrame = false;
 	mAbortFrame = false;
 	mCurrentFrameIsSFrame = false;
-  mLastFrameEndSample = 0;
   mFoundEndFlag = false;
 	
 }
@@ -50,7 +49,6 @@ bool HdlcAnalyzer::FrameComparison(const Frame & frame0, const Frame & frame1)
 
 void HdlcAnalyzer::CommitFrames()
 {
-
   if(mResultFrames.empty())
   {
     return;
@@ -60,7 +58,7 @@ void HdlcAnalyzer::CommitFrames()
   Frame lastFrame = mResultFrames.at( 0 );
   mResults->AddFrame( lastFrame );
 
-  // Commit the rest of the frames avoiding overlapping sample endpoints
+  // Commit the rest of the frames fixing overlapping sample endpoints
   for(U32 i=1; i < mResultFrames.size(); ++i)
   {
     Frame frame = mResultFrames.at(i);
