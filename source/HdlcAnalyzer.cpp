@@ -2,7 +2,6 @@
 #include "HdlcAnalyzerSettings.h"
 #include <AnalyzerChannelData.h>
 #include <AnalyzerHelpers.h>
-#include <iostream>
 #include <algorithm>
 
 using namespace std;

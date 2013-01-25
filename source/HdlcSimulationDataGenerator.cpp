@@ -2,8 +2,6 @@
 #include "HdlcAnalyzerSettings.h"
 #include <AnalyzerHelpers.h>
 #include <cstdlib>
-#include <iostream>
-#include <iomanip>
 #include <algorithm>
 
 HdlcSimulationDataGenerator::HdlcSimulationDataGenerator()

@@ -2,7 +2,6 @@
 #include <AnalyzerHelpers.h>
 #include "HdlcAnalyzer.h"
 #include "HdlcAnalyzerSettings.h"
-#include <iostream>
 #include <fstream>
 #include <sstream>
 
