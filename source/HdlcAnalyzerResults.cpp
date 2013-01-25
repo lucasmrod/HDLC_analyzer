@@ -40,9 +40,6 @@ void HdlcAnalyzerResults::GenBubbleText( U64 frame_index, DisplayBase display_ba
 		case HDLC_FIELD_EXTENDED_CONTROL:
 			GenControlFieldString( frame, display_base, tabular );
 			break;
-		case HDLC_FIELD_HCS:
-			GenFcsFieldString( frame, display_base, tabular );
-			break;
 		case HDLC_FIELD_INFORMATION:
 			GenInformationFieldString( frame, display_base, tabular );
 			break;
@@ -197,14 +194,7 @@ void HdlcAnalyzerResults::GenFcsFieldString( const Frame & frame, DisplayBase di
     fieldNameStr << "!";
   }
   
-  if( frame.mType == HDLC_FIELD_FCS )
-  {
-      fieldNameStr << "FCS CRC" << crcTypeStr;
-  }
-  else
-  {
-      fieldNameStr << "HCS CRC" << crcTypeStr;
-  }
+  fieldNameStr << "FCS CRC" << crcTypeStr;
   
   if( !tabular )
   {
@@ -284,12 +274,7 @@ void HdlcAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 		case HDLC_CRC32: fcsBits = 32; break;
 	}
 
-	fileStream << "Time[s],Address,Control,";
-	if( mSettings->mWithHcsField )
-	{
-		fileStream << "HCS,";
-	}
-	fileStream << "Information,FCS" << endl;
+	fileStream << "Time[s],Address,Control,Information,FCS" << endl;
 	
 	char escapeStr[ 5 ];
 	AnalyzerHelpers::GetNumberString( HDLC_ESCAPE_SEQ_VALUE, display_base, 8, escapeStr, 5 );
@@ -469,35 +454,6 @@ void HdlcAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 		{ 
 			UpdateExportProgressAndCheckForCancel( frameNumber, numFrames );
 			return; 
-		}
-		
-		// 4) HCS
-		if( mSettings->mWithHcsField && !isSFrame ) // HDLC with HCS field and no S-Frame
-		{
-			Frame hcsFrame = GetFrame( frameNumber );
-			if( hcsFrame.mType == HDLC_FIELD_INFORMATION ) // ERROR
-			{
-				fileStream << ",";
-			}
-			else
-			{
-				if( hcsFrame.mType != HDLC_FIELD_HCS ) // ERROR
-				{
-					fileStream << "," << endl;
-					continue;
-				}
-				char hcsStr[ 128 ];
-				AnalyzerHelpers::GetNumberString( hcsFrame.mData1, display_base, fcsBits, hcsStr, 128 );
-				fileStream << hcsStr << ",";
-			}
-			
-			frameNumber++;
-			if( frameNumber >= numFrames ) 
-			{ 
-				UpdateExportProgressAndCheckForCancel( frameNumber, numFrames );
-				return; 
-			}
-			
 		}
 		
 		// 5) Information Fields

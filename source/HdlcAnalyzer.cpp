@@ -108,13 +108,11 @@ void HdlcAnalyzer::WorkerThread()
 void HdlcAnalyzer::ProcessHDLCFrame()
 {
 	mCurrentFrameBytes.clear();
-	mCurrentFrameBytesForHCS.clear();
 	
 	HdlcByte addressByte = ProcessFlags();
 	
 	ProcessAddressField( addressByte );
 	ProcessControlField();
-	mCurrentFrameBytesForHCS = mCurrentFrameBytes;
 	ProcessInfoAndFcsField();
 	
 	if( mAbortFrame ) // The frame has been aborted at some point
@@ -189,33 +187,23 @@ void HdlcAnalyzer::BitSyncProcessFlags()
 			
 			flags.push_back(bs);
 			
-      if( !mSettings->mSharedZero )
+      if( mHdlc->WouldAdvancingCauseTransition( mSamplesInHalfPeriod * 1.5 ) )
       {
-        if( mHdlc->WouldAdvancingCauseTransition( mSamplesInHalfPeriod * 1.5 ) )
-        {
-          mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
-          mPreviousBitState = mHdlc->GetBitState();
-          mHdlc->AdvanceToNextEdge();
-        }
-        else
-        {
-          mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
-          mPreviousBitState = mHdlc->GetBitState();
-          mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
-        }
+        mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
+        mPreviousBitState = mHdlc->GetBitState();
+        mHdlc->AdvanceToNextEdge();
+      }
+      else
+      {
+        mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
+        mPreviousBitState = mHdlc->GetBitState();
+        mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
       }
 			
 			flagEncountered = true;
 		}
 		else // non-flag
 		{
-			if( mSettings->mSharedZero )
-			{
-				mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
-				mPreviousBitState = mHdlc->GetBitState();
-				mHdlc->Advance( mSamplesInHalfPeriod * 0.5 );
-			}
-			
 			if( flagEncountered )
 			{
 				break;
@@ -562,7 +550,6 @@ void HdlcAnalyzer::ProcessInfoAndFcsField()
 void HdlcAnalyzer::InfoAndFcsField(const vector<HdlcByte> & informationAndFcs)
 {
 	vector<HdlcByte> information = informationAndFcs;
-	vector<HdlcByte> hcs;
 	vector<HdlcByte> fcs;
 	
 	if( !mAbortFrame ) 
@@ -572,14 +559,8 @@ void HdlcAnalyzer::InfoAndFcsField(const vector<HdlcByte> & informationAndFcs)
 		{
 			case HDLC_CRC8:
 			{
-				if( ( !information.empty() && ( !mSettings->mWithHcsField ) ) || 
-					( information.size() >= 2 && ( mSettings->mWithHcsField ) ) )
+				if( !information.empty() )
 				{
-					if( mSettings->mWithHcsField )
-					{
-						hcs.push_back( information.front() );
-						information.erase( information.begin() );
-					}
 					fcs.push_back( information.back() );
 					information.pop_back();
 				}
@@ -587,15 +568,8 @@ void HdlcAnalyzer::InfoAndFcsField(const vector<HdlcByte> & informationAndFcs)
 			}
 			case HDLC_CRC16:
 			{
-				if( ( information.size() >= 2 && !mSettings->mWithHcsField ) || 
-					( information.size() >= 4 && mSettings->mWithHcsField ) ||
-					( information.size() >= 2 && mSettings->mWithHcsField && mCurrentFrameIsSFrame ) )
-				{
-					if( mSettings->mWithHcsField && !mCurrentFrameIsSFrame )
-					{
-						hcs.insert( hcs.end(), information.begin(), information.begin()+2 );
-						information.erase( information.begin(), information.begin()+2 );
-					}
+				if( information.size() >= 2 ) 
+        {
 					fcs.insert( fcs.end(), information.end()-2, information.end() );
 					information.erase( information.end()-2, information.end() );
 				}
@@ -603,14 +577,8 @@ void HdlcAnalyzer::InfoAndFcsField(const vector<HdlcByte> & informationAndFcs)
 			}
 			case HDLC_CRC32:
 			{
-				if( ( information.size() >= 4 && ( !mSettings->mWithHcsField ) ) || 
-					( information.size() >= 8 && ( mSettings->mWithHcsField ) ) )
+				if( information.size() >= 4 )
 				{
-					if( mSettings->mWithHcsField )
-					{
-						hcs.insert( hcs.end(), information.begin(), information.begin()+4 );
-						information.erase( information.begin(), information.begin()+4 );
-					}
 					fcs.insert( fcs.end(), information.end()-4, information.end() );
 					information.erase( information.end()-4, information.end() );
 				}
@@ -619,21 +587,13 @@ void HdlcAnalyzer::InfoAndFcsField(const vector<HdlcByte> & informationAndFcs)
 		}
 	}
 
-	if( !mAbortFrame ) 
-	{
-		if( !hcs.empty() )
-		{
-			ProcessFcsField( hcs, HDLC_CRC_HCS );
-		}
-	}
-	
 	ProcessInformationField( information );
 		
 	if( !mAbortFrame ) 
 	{
 		if( !fcs.empty() )
 		{
-			ProcessFcsField( fcs, HDLC_CRC_FCS );
+			ProcessFcsField( fcs );
 		}
 	}
 	
@@ -668,7 +628,7 @@ bool HdlcAnalyzer::CrcOk( const vector<U8> & remainder ) const
 	return true;
 }
 
-void HdlcAnalyzer::ProcessFcsField( const vector<HdlcByte> & fcs, HdlcCrcField crcFieldType )
+void HdlcAnalyzer::ProcessFcsField( const vector<HdlcByte> & fcs )
 {
   vector<U8> calculatedFcs;
   vector<U8> readFcs = HdlcBytesToVectorBytes( fcs );
@@ -677,58 +637,34 @@ void HdlcAnalyzer::ProcessFcsField( const vector<HdlcByte> & fcs, HdlcCrcField c
   {
     case HDLC_CRC8:
     {
-      if( crcFieldType == HDLC_CRC_FCS )
-      {
         if( !mCurrentFrameBytes.empty() )
         {
           mCurrentFrameBytes.pop_back();
         }
         calculatedFcs = HdlcSimulationDataGenerator::Crc8( mCurrentFrameBytes );
-      }
-      else
-      {
-        calculatedFcs = HdlcSimulationDataGenerator::Crc8( mCurrentFrameBytesForHCS );
-      }
-      break;
+        break;
     }
     case HDLC_CRC16:
     {
-      if( crcFieldType == HDLC_CRC_FCS )
-      {
         if( mCurrentFrameBytes.size() >= 2 )
         {
           mCurrentFrameBytes.erase( mCurrentFrameBytes.end()-2, mCurrentFrameBytes.end() );
         }
-        
         calculatedFcs = HdlcSimulationDataGenerator::Crc16( mCurrentFrameBytes );
-        
-      }
-      else
-      {
-        calculatedFcs = HdlcSimulationDataGenerator::Crc16( mCurrentFrameBytesForHCS );
-      }
-      break;
+        break;
     }
     case HDLC_CRC32:
     {
-      if( crcFieldType == HDLC_CRC_FCS )
-      {
         if( mCurrentFrameBytes.size() >= 4 )
         {
           mCurrentFrameBytes.erase( mCurrentFrameBytes.end()-4, mCurrentFrameBytes.end() );
         }
         calculatedFcs = HdlcSimulationDataGenerator::Crc32( mCurrentFrameBytes );
-      }
-      else
-      {
-        calculatedFcs = HdlcSimulationDataGenerator::Crc32( mCurrentFrameBytesForHCS );
-      }
-      break;
+        break;
     }
   }
   
-  HdlcFieldType frameType = ( crcFieldType == HDLC_CRC_HCS ) ? HDLC_FIELD_HCS : HDLC_FIELD_FCS;
-  Frame frame = CreateFrame( frameType, fcs.front().startSample, fcs.back().endSample, 
+  Frame frame = CreateFrame( HDLC_FIELD_FCS, fcs.front().startSample, fcs.back().endSample, 
                 VectorToValue(readFcs), VectorToValue(calculatedFcs) );
   
   if( calculatedFcs != readFcs )
@@ -738,12 +674,8 @@ void HdlcAnalyzer::ProcessFcsField( const vector<HdlcByte> & fcs, HdlcCrcField c
   
   AddFrameToResults( frame );
   
-  if( crcFieldType == HDLC_CRC_FCS )
-  {
-    // Put a marker in the end of the HDLC frame
-    mResults->AddMarker( frame.mEndingSampleInclusive, AnalyzerResults::Stop, mSettings->mInputChannel );
-  }
-  
+  // Put a marker in the end of the HDLC frame
+  mResults->AddMarker( frame.mEndingSampleInclusive, AnalyzerResults::Stop, mSettings->mInputChannel );
 }
 
 HdlcByte HdlcAnalyzer::ReadByte()

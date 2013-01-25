@@ -42,7 +42,7 @@ protected:
 	vector<HdlcByte> ReadProcessAndFcsField();
 	void InfoAndFcsField( const vector<HdlcByte> & informationAndFcs );
 	void ProcessInformationField( const vector<HdlcByte> & information );
-	void ProcessFcsField( const vector<HdlcByte> & fcs, HdlcCrcField crcFieldType );
+	void ProcessFcsField( const vector<HdlcByte> & fcs );
 	HdlcByte ReadByte();
 	
 	// Bit Sync Transmission functions
@@ -82,7 +82,6 @@ protected:
 	U32 mSamplesIn8Bits;
 	
 	vector<U8> mCurrentFrameBytes;
-	vector<U8> mCurrentFrameBytesForHCS;
 	
 	BitState mPreviousBitState;
 	U32 mConsecutiveOnes;

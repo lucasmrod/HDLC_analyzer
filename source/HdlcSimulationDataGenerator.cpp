@@ -33,8 +33,6 @@ void HdlcSimulationDataGenerator::Initialize( U32 simulation_sample_rate, HdlcAn
 	GenerateAbortFramesIndexes();
 	mAbortByte = 0;
 	mFrameNumber = 0;	
-	mFirstFlag = true;
-	mLastFlag = false;
 	mWrongFramesSeparation = ( rand() % 10 ) + 10; // [15..30]
 	
 	mControlValue=0;
@@ -213,13 +211,6 @@ void HdlcSimulationDataGenerator::CreateHDLCFrame( const vector<U8> & address, c
 	
 	allFields.insert( allFields.end(), address.begin(), address.end() );
 	allFields.insert( allFields.end(), control.begin(), control.end() );
-	
-	if( mSettings->mWithHcsField && !information.empty() ) // ISO/IEC 13239:2002(E) page 14
-	{
-		vector<U8> hcs = GenFcs( mSettings->mHdlcFcs, allFields );
-		allFields.insert( allFields.end(), hcs.begin(), hcs.end() ); // The final FCS is calculated including the HCS
-	}
-	
 	allFields.insert( allFields.end(), information.begin(), information.end() );
 	
 	// Calculate the crc of the address, control and data fields
@@ -261,11 +252,6 @@ void HdlcSimulationDataGenerator::TransmitBitSync( const vector<U8> & stream )
 {
 	// Opening flag
 	CreateFlagBitSeq();
-	
-	if( mSettings->mSharedZero ) // If shared zero, then advance for the start of the frame
-	{
-		mHdlcSimulationData.Advance( mSamplesInHalfPeriod );
-	}
 	
 	bool abortFrame = ContainsElement( mFrameNumber );
 	
@@ -325,7 +311,6 @@ void HdlcSimulationDataGenerator::TransmitBitSync( const vector<U8> & stream )
 		}
 	}
 	
-	mLastFlag = true;
 	// Closing flag
 	CreateFlagBitSeq();
 
@@ -333,21 +318,12 @@ void HdlcSimulationDataGenerator::TransmitBitSync( const vector<U8> & stream )
 
 void HdlcSimulationDataGenerator::CreateFlagBitSeq() 
 {
-	if( !mSettings->mSharedZero || ( mSettings->mSharedZero && ( mFirstFlag || mLastFlag ) ) ) // If not shared zero
-	{
-		mHdlcSimulationData.Transition();
-	}
+	mHdlcSimulationData.Transition();
 	
 	mHdlcSimulationData.Advance( mSamplesInAFlag );
 	mHdlcSimulationData.Transition();
 	
-	if( !mSettings->mSharedZero ) // If not shared zero
-	{
-		mHdlcSimulationData.Advance( mSamplesInHalfPeriod );
-	}
-
-	mFirstFlag = false;
-	mLastFlag = false;
+	mHdlcSimulationData.Advance( mSamplesInHalfPeriod );
 
 }
 
