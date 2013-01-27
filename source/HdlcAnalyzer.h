@@ -66,9 +66,8 @@ protected:
 	vector<U8> HdlcBytesToVectorBytes( const vector<HdlcByte> & asyncBytes ) const;
 	U64 VectorToValue( const vector<U8> & v ) const;
   
-  void AddFrameToResults( Frame & frame );
+  void AddFrameToResults( const Frame & frame );
   void CommitFrames();
-  static bool FrameComparison(const Frame & frame0, const Frame & frame2);
 	
 protected:
   
@@ -89,9 +88,7 @@ protected:
 	bool mAbortFrame;
 	bool mCurrentFrameIsSFrame;
 	HdlcFieldType mCurrentField;
-	Frame mAbortFrameToEmit;
-	Frame mEndFlagFrameToEmit;
-  bool mFoundEndFlag;
+	bool mFoundEndFlag;
   
   vector<Frame> mResultFrames;
 	
