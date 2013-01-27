@@ -494,7 +494,7 @@ void HdlcAnalyzer::ProcessControlField()
 				U8 flag = ( byte.escaped ) ? HDLC_ESCAPED_BYTE : 0;
 				Frame frame = CreateFrame( HDLC_FIELD_EXTENDED_CONTROL, byte.startSample, 
 										byte.endSample, byte.value, i, flag );
-				AddFrameToResults( frame );						
+				AddFrameToResults( frame );
 			}
 					
 		}

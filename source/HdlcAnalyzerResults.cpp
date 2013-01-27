@@ -246,7 +246,7 @@ void HdlcAnalyzerResults::GenAbortFieldString( bool tabular )
 
 string HdlcAnalyzerResults::EscapeByteStr( const Frame & frame )
 {
-	if( mSettings->mTransmissionMode == HDLC_TRANSMISSION_BYTE_ASYNC && frame.mFlags & HDLC_ESCAPED_BYTE )
+	if( ( mSettings->mTransmissionMode == HDLC_TRANSMISSION_BYTE_ASYNC ) && ( frame.mFlags & HDLC_ESCAPED_BYTE ) )
 	{
 		return string( "0x7D-" );
 	}
