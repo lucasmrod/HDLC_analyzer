@@ -1,7 +1,6 @@
 #include "HdlcSimulationDataGenerator.h"
 #include "HdlcAnalyzerSettings.h"
 #include <AnalyzerHelpers.h>
-#include <cstdlib>
 #include <algorithm>
 
 HdlcSimulationDataGenerator::HdlcSimulationDataGenerator() :
@@ -29,7 +28,7 @@ void HdlcSimulationDataGenerator::Initialize ( U32 simulation_sample_rate, HdlcA
 	mHdlcSimulationData.SetInitialBitState ( BIT_LOW );
 
 	// Initialize rng seed
-	srand ( time ( NULL ) );
+	srand ( 5 );
 
 	mSamplesInHalfPeriod = U64 ( simulation_sample_rate / double ( mSettings->mBitRate ) );
 	mSamplesInAFlag = mSamplesInHalfPeriod * 7;

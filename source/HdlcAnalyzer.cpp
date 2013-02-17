@@ -41,6 +41,9 @@ void HdlcAnalyzer::SetupAnalyzer()
 	mAbortFrame = false;
 	mCurrentFrameIsSFrame = false;
 	mFoundEndFlag = false;
+  
+  mResultFrames.clear();
+  mCurrentFrameBytes.clear();
 
 }
 
